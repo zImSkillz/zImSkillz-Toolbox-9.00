@@ -132,25 +132,36 @@ namespace zImSkillz_s_Toolbox
 
         private void metroButton1_Click_1(object sender, EventArgs e)
         {
-            ps4.Notify(222, "GSC is loading..");
-            byte[] buffer = null;
-            try
+            foreach (libdebug.Process process in ps4.GetProcessList().processes)
             {
-                buffer = File.ReadAllBytes(gscloacation.Text);
+                if (process.name == "eboot.bin")
+                {
+                    pid = process.pid;
+
+                    ps4.Notify(222, "GSC is loading..");
+                    byte[] buffer = null;
+                    try
+                    {
+                        buffer = File.ReadAllBytes(gscloacation.Text);
+                        ;
+                    }
+                    catch
+                    {
+                        MetroFramework.MetroMessageBox.Show(this, "Could not read compiled gsc file, make sure it still exists.", "Couldn't Read File", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                        break;
+                    }
+                    ulong dupGscAddress = (ulong)selectedGameVersion;
+                    var filePointerAddress = ps4.ReadMemory<ulong>(pid, dupGscAddress + 0x10);
+                    int checksum = ps4.ReadMemory<int>(pid, filePointerAddress + 0x8);
+                    BitConverter.GetBytes(checksum).CopyTo(buffer, 0x8);
+                    var newGscFileAddress = ps4.AllocateMemory(pid, buffer.Length);
+                    ps4.WriteMemory(pid, newGscFileAddress, buffer);
+                    ps4.WriteMemory(pid, dupGscAddress + 0x10, newGscFileAddress);
+                    ps4.Notify(222, "GSC injected!");
+                    break;
+                }
             }
-            catch
-            {
-                MetroFramework.MetroMessageBox.Show(this, "Could not read compiled gsc file, make sure it still exists.", "Couldn't Read File", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            ulong dupGscAddress = (ulong)selectedGameVersion;
-            var filePointerAddress = ps4.ReadMemory<ulong>(pid, dupGscAddress + 0x10);
-            int checksum = ps4.ReadMemory<int>(pid, filePointerAddress + 0x8);
-            BitConverter.GetBytes(checksum).CopyTo(buffer, 0x8);
-            var newGscFileAddress = ps4.AllocateMemory(pid, buffer.Length);
-            ps4.WriteMemory(pid, newGscFileAddress, buffer);
-            ps4.WriteMemory(pid, dupGscAddress + 0x10, newGscFileAddress);
-            ps4.Notify(222, "GSC injected!");
         }
 
         private void metroButton3_Click(object sender, EventArgs e)
